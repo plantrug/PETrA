@@ -1,5 +1,4 @@
 package it.unisa.petra.batch;
-
 import it.unisa.petra.core.Process;
 import it.unisa.petra.core.ProcessOutput;
 import it.unisa.petra.core.exceptions.ADBNotFoundException;
