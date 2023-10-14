@@ -14,7 +14,7 @@ class Main {
                 if (args[0].equals("--desktop")) {
                     MainUI.run();
                 } else {
-                    System.out.println("\nPame:");
+                    System.out.println("\nName:");
                     System.out.println("\tPETrA - Power Estimation Tool for Android\n");
                     System.out.println("Launching PETrA gui:");
                     System.out.println("\tjava -jar PETrA.jar --desktop\n");
