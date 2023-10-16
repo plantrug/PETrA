@@ -362,7 +362,7 @@ public class Process {
 
     public String extractAppName(String apkLocationPath) throws NoDeviceFoundException, AppNameCannotBeExtractedException {
         String sdkFolderPath = System.getenv("ANDROID_HOME");
-        String aaptPath = sdkFolderPath + "/build-tools/25.0.3/aapt";
+        String aaptPath = sdkFolderPath + "/build-tools/34.0.0/aapt";
         String aaptOutput = this.executeCommand(aaptPath + " dump badging " + apkLocationPath, null);
         String appName = "";
         Pattern pattern = Pattern.compile("package: name='([^']*)' versionCode='[^']*' versionName='[^']*' platformBuildVersionName='[^']*'");
