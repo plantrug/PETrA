@@ -353,7 +353,7 @@ public class Process {
 
     private void checkADBExists() throws ADBNotFoundException {
         String sdkFolderPath = System.getenv("ANDROID_HOME");
-        String adbPath = sdkFolderPath + "/platform-tools/adb";
+        String adbPath = sdkFolderPath + "/platform-tools/adb.exe";
         File adbFile = new File(adbPath);
         if (!adbFile.exists()) {
             throw new ADBNotFoundException();
