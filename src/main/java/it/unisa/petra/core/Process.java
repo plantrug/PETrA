@@ -23,15 +23,17 @@ import java.util.regex.Pattern;
 
 public class Process {
 
+    private final String getadb = System.getenv("adb");
+
     public void installApp(String apkLocation) throws NoDeviceFoundException, ADBNotFoundException {
 
         this.checkADBExists();
 
-        this.executeCommand("adb shell dumpsys battery set ac 0", null);
-        this.executeCommand("adb shell dumpsys battery set usb 0", null);
+        this.executeCommand(getadb + " shell dumpsys battery set ac 0", null);
+        this.executeCommand(getadb + " shell dumpsys battery set usb 0", null);
 
         System.out.println("Installing app.");
-        this.executeCommand("adb install " + apkLocation, null);
+        this.executeCommand(getadb + " install " + apkLocation, null);
     }
 
     public void uninstallApp(String appName) throws NoDeviceFoundException, ADBNotFoundException {
@@ -39,7 +41,7 @@ public class Process {
         this.checkADBExists();
 
         System.out.println("Uninstalling app.");
-        this.executeCommand("adb shell pm uninstall " + appName, null);
+        this.executeCommand(getadb +" shell pm uninstall " + appName, null);
     }
 
     public ProcessOutput playRun(int run, String appName, int interactions, int timeBetweenInteractions,
@@ -104,7 +106,7 @@ public class Process {
         resultsWriter.flush();
         this.stopApp(appName, run);
 
-        this.executeCommand("adb shell dumpsys battery reset", null);
+        this.executeCommand(getadb + " shell dumpsys battery reset", null);
 
         System.out.println("Run " + run + ": complete.");
         return new ProcessOutput(timeCapturing, seed);
@@ -114,7 +116,7 @@ public class Process {
         System.out.println("Extracting power profile.");
         String jarDirectory = new File(getClass().getProtectionDomain().getCodeSource().getLocation().getPath()).getParentFile().getPath();
 
-        this.executeCommand("adb pull /system/framework/framework-res.apk", null);
+        this.executeCommand(getadb + " pull /system/framework/framework-res.apk", null);
 
         this.executeCommand("jar xf " + jarDirectory + "/PETrA.jar apktool_2.2.2.jar", null);
         this.executeCommand("java -jar apktool_2.2.2.jar if framework-res.apk", null);
@@ -127,14 +129,14 @@ public class Process {
 
     private void resetApp(String appName, int run) throws NoDeviceFoundException {
         System.out.println("Run " + run + ": resetting app and batteristats.");
-        this.executeCommand("adb shell pm clear " + appName, null);
-        this.executeCommand("adb shell dumpsys batterystats --reset", null);
+        this.executeCommand(getadb + " shell pm clear " + appName, null);
+        this.executeCommand(getadb + " shell dumpsys batterystats --reset", null);
     }
 
     private SysTraceRunner startProfiling(String appName, int run, int timeCapturing, String systraceFilename,
                                           String platformToolsFolder) throws NoDeviceFoundException {
         System.out.println("Run " + run + ": starting profiling.");
-        this.executeCommand("adb shell am profile start " + appName + " ./data/local/tmp/log.trace", null);
+        this.executeCommand(getadb + " shell am profile start " + appName + " ./data/local/tmp/log.trace", null);
 
         System.out.println("Run " + run + ": capturing system traces.");
         return new SysTraceRunner(timeCapturing, systraceFilename, platformToolsFolder);
@@ -144,7 +146,7 @@ public class Process {
                                 int timeBetweenInteractions, int seed) throws NoDeviceFoundException {
         if (scriptLocationPath.isEmpty()) {
             System.out.println("Run " + run + ": executing random actions.");
-            this.executeCommand("adb shell monkey -p " + appName + " -s " + seed + " --throttle " + timeBetweenInteractions + " --ignore-crashes --ignore-timeouts --ignore-security-exceptions " + interactions, null);
+            this.executeCommand(getadb + " shell monkey -p " + appName + " -s " + seed + " --throttle " + timeBetweenInteractions + " --ignore-crashes --ignore-timeouts --ignore-security-exceptions " + interactions, null);
         } else {
             System.out.println("Run " + run + ": running monkeyrunner script.");
             String jarDirectory = new File(getClass().getProtectionDomain().getCodeSource().getLocation().getPath()).getParentFile().getPath();
@@ -156,13 +158,13 @@ public class Process {
 
     private void extractInfo(String appName, int run, String batteryStatsFilename, String runDataFolderName, String platformToolsFolder, String traceviewFilename) throws NoDeviceFoundException {
         System.out.println("Run " + run + ": stop profiling.");
-        this.executeCommand("adb shell am profile stop " + appName, null);
+        this.executeCommand(getadb + " shell am profile stop " + appName, null);
 
         System.out.println("Run " + run + ": saving battery stats.");
-        this.executeCommand("adb shell dumpsys batterystats", new File(batteryStatsFilename));
+        this.executeCommand(getadb + " shell dumpsys batterystats", new File(batteryStatsFilename));
 
         System.out.println("Run " + run + ": saving traceviews.");
-        this.executeCommand("adb pull ./data/local/tmp/log.trace " + runDataFolderName, null);
+        this.executeCommand(getadb + " pull ./data/local/tmp/log.trace " + runDataFolderName, null);
         this.executeCommand(platformToolsFolder + "/dmtracedump -o " + runDataFolderName + "log.trace", new File(traceviewFilename));
 
     }
@@ -304,17 +306,17 @@ public class Process {
 
     private void startApp(String appName) throws NoDeviceFoundException {
         System.out.println("Starting app.");
-        this.executeCommand("adb shell input keyevent 82", null);
-        this.executeCommand("adb shell monkey -p " + appName + " 1", null);
-        this.executeCommand("adb shell am broadcast -a org.thisisafactory.simiasque.SET_OVERLAY --ez enable true", null);
+        this.executeCommand(getadb + " shell input keyevent 82", null);
+        this.executeCommand(getadb + " shell monkey -p " + appName + " 1", null);
+        this.executeCommand(getadb + " shell am broadcast -a org.thisisafactory.simiasque.SET_OVERLAY --ez enable true", null);
 
     }
 
     private void stopApp(String appName, int run) throws NoDeviceFoundException {
         System.out.println("Run " + run + ": stopping app.");
-        this.executeCommand("adb shell am broadcast -a org.thisisafactory.simiasque.SET_OVERLAY --ez enable false", null);
-        this.executeCommand("adb shell am force-stop " + appName, null);
-        this.executeCommand("adb shell pm clear " + appName, null);
+        this.executeCommand(getadb + " shell am broadcast -a org.thisisafactory.simiasque.SET_OVERLAY --ez enable false", null);
+        this.executeCommand(getadb + " shell am force-stop " + appName, null);
+        this.executeCommand(getadb + " shell pm clear " + appName, null);
     }
 
     private String executeCommand(String command, File outputFile) throws NoDeviceFoundException {
@@ -362,10 +364,10 @@ public class Process {
 
     public String extractAppName(String apkLocationPath) throws NoDeviceFoundException, AppNameCannotBeExtractedException {
         String sdkFolderPath = System.getenv("ANDROID_HOME");
-        String aaptPath = sdkFolderPath + "/build-tools/31.0.0/aapt";
+        String aaptPath = sdkFolderPath + "/build-tools/34.0.0/aapt";
         String aaptOutput = this.executeCommand(aaptPath + " dump badging " + apkLocationPath, null);
         String appName = "";
-        Pattern pattern = Pattern.compile("package: name='([^']*)' versionCode='[^']*' versionName='[^']*' platformBuildVersionName='[^']*'");
+        Pattern pattern = Pattern.compile("package: name='([^']*)' versionCode='[^']*' versionName='[^']*'");
 
         for (String line : aaptOutput.split("\n")) {
             Matcher matcher = pattern.matcher(line);
