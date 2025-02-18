@@ -1,3 +1,3 @@
 Manifest-Version: 1.0
-Main-Class: it.unisa.petra.Main
+Main-Class: brut.apktool.Main
 

@@ -112,10 +112,10 @@ public class Process {
 
     public void extractPowerProfile(String outputLocation) throws NoDeviceFoundException {
         System.out.println("Extracting power profile.");
+        System.out.println("output location " + outputLocation);
         String jarDirectory = new File(getClass().getProtectionDomain().getCodeSource().getLocation().getPath()).getParentFile().getPath();
-
+        System.out.println("JAR DIRECTORY " + jarDirectory);
         this.executeCommand("adb" + " pull /system/framework/framework-res.apk", null);
-
         this.executeCommand("jar xf " + jarDirectory + "/PETrA.jar apktool_2.2.2.jar", null);
         this.executeCommand("java -jar apktool_2.2.2.jar if framework-res.apk", null);
         this.executeCommand("java -jar apktool_2.2.2.jar d framework-res.apk", null);
@@ -362,6 +362,8 @@ public class Process {
 
     public String extractAppName(String apkLocationPath) throws NoDeviceFoundException, AppNameCannotBeExtractedException {
         String sdkFolderPath = System.getenv("ANDROID_HOME");
+        /*String str = "/home/antonio/Android/Sdk";*/
+
         String aaptPath = sdkFolderPath + "/build-tools/30.0.0/aapt";
         String aaptOutput = this.executeCommand(aaptPath + " dump badging " + apkLocationPath, null);
         String appName = "";
