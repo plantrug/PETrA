@@ -15,6 +15,9 @@ import it.unisa.petra.core.traceview.TraceViewParser;
 import it.unisa.petra.core.traceview.TraceviewStructure;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -154,7 +157,7 @@ public class Process {
         }
     }
 
-    private void extractInfo(String appName, int run, String batteryStatsFilename, String runDataFolderName, String platformToolsFolder, String traceviewFilename) throws NoDeviceFoundException {
+    /*private void extractInfo(String appName, int run, String batteryStatsFilename, String runDataFolderName, String platformToolsFolder, String traceviewFilename) throws NoDeviceFoundException {
         System.out.println("Run " + run + ": stop profiling.");
         this.executeCommand("adb" + " shell am profile stop " + appName, null);
 
@@ -165,15 +168,94 @@ public class Process {
         this.executeCommand("adb" + " pull ./data/local/tmp/log.trace " + runDataFolderName, null);
         this.executeCommand(platformToolsFolder + "/dmtracedump -o " + runDataFolderName + "log.trace", new File(traceviewFilename));
 
+    }*/
+
+    private void extractInfo(String appName,
+                             int run,
+                             String batteryStatsFilename,
+                             String runDataFolderName,
+                             String platformToolsFolder,
+                             String traceviewFilename) throws NoDeviceFoundException {
+
+        System.out.println("Run " + run + ": preparing for profiling.");
+
+        // 1️⃣ Trova il PID dell’app
+        System.out.println("Finding PID for " + appName);
+        String pid = this.executeCommand("adb shell pidof " + appName, null);
+        if (pid == null || pid.trim().isEmpty()) {
+            throw new RuntimeException("ERROR: Impossibile ottenere PID dell'app " + appName);
+        }
+        pid = pid.trim();
+        System.out.println("PID found: " + pid);
+
+        // 2️⃣ Avvia il profiling TRACEVIEW
+        System.out.println("Run " + run + ": start profiling.");
+        this.executeCommand("adb shell am profile start " + pid + " /data/local/tmp/log.trace", null);
+
+        // (Aspetta un minimo per raccogliere dati di profiling)
+        try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
+
+        // 3️⃣ Ferma il profiling
+        System.out.println("Run " + run + ": stop profiling.");
+        this.executeCommand("adb shell am profile stop " + appName, null);
+
+        // 4️⃣ Salva battery stats
+        System.out.println("Run " + run + ": saving battery stats.");
+        this.executeCommand("adb shell dumpsys batterystats", new File(batteryStatsFilename));
+
+        // 5️⃣ Pull del file traceview dal device
+        System.out.println("Run " + run + ": pulling trace file.");
+        this.executeCommand("adb pull /data/local/tmp/log.trace " + runDataFolderName, null);
+
+        // Controlla se il file è stato scaricato
+        File traceFile = new File(runDataFolderName + File.separator + "log.trace");
+        if (!traceFile.exists() || traceFile.length() == 0) {
+            throw new RuntimeException("ERROR: Il file log.trace non esiste o è vuoto!");
+        }
+        System.out.println("Trace file exists: " + traceFile.exists() + " size: " + traceFile.length());
+
+        // 6️⃣ Esegui dmtracedump correttamente
+        System.out.println("Run " + run + ": parsing traceview.");
+        String cmd = platformToolsFolder + "/dmtracedump " + traceFile.getAbsolutePath();
+        this.executeCommand(cmd, new File(traceviewFilename));
+
+        // Verifica output generato
+        File out = new File(traceviewFilename);
+        if (!out.exists() || out.length() == 0) {
+            throw new RuntimeException("ERROR: dmtracedump output is empty! Comando: " + cmd);
+        }
+
+        System.out.println("Traceview parsing completed. Output file: " + traceviewFilename);
     }
+
 
     List<TraceLine> parseAndAggregateResults(String traceviewFilename, String batteryStatsFilename, String systraceFilename,
                                              PowerProfile powerProfile, String filter, int run) throws IOException {
         List<TraceLine> traceLinesWConsumption = new ArrayList<>();
 
         System.out.println("Run " + run + ": elaborating traceview info.");
+        System.out.println("TRACEVIWE FILENAME: "+ traceviewFilename + " filter: " + filter);
+        Path p = Paths.get(traceviewFilename);
+        System.out.println("File esiste: " + Files.exists(p));
+        try {
+            System.out.println("File size: " + Files.size(p) + " bytes");
+        } catch (IOException e) {
+            System.out.println("Impossibile leggere size: " + e.getMessage());
+        }
         TraceviewStructure traceviewStructure = TraceViewParser.parseFile(traceviewFilename, filter);
+        System.out.println("TEST TRACEVIEW STRUCTURE" + traceviewStructure + ": elaborating traceview info.");
+        /*DEBUG*/
+        if (traceviewStructure == null) {
+            System.out.println("TraceViewParser.parseFile ha ritornato null!");
+        } else {
+            System.out.println("Start: " + traceviewStructure.getStartTime() +
+                    " End: " + traceviewStructure.getEndTime());
+            List<TraceLine> traceLines = traceviewStructure.getTraceLines();
+            System.out.println("traceLines == null? " + (traceLines == null));
+            System.out.println("traceLines.size() = " + (traceLines == null ? "null" : traceLines.size()));
+        }
         List<TraceLine> traceLines = traceviewStructure.getTraceLines();
+        System.out.println("TEST TRACEVIEW LINES " + traceLines + ": elaborating traceview info.");
         int traceviewLength = traceviewStructure.getEndTime();
         int traceviewStart = traceviewStructure.getStartTime();
 
@@ -186,9 +268,11 @@ public class Process {
         System.out.println("Run " + run + ": aggregating results.");
         energyInfoArray = this.mergeEnergyInfo(energyInfoArray, cpuInfo, cpuInfo.getNumberOfCpu());
         for (TraceLine traceLine : traceLines) {
+            System.out.println("TEST TRACEVIEW CICLO " + traceLine + ": aggregating results.");
             traceLinesWConsumption.add(this.calculateConsumption(traceLine, energyInfoArray, powerProfile));
         }
 
+        System.out.println("TEST TRACEVIEW 2 " + traceLinesWConsumption + ": aggregating results.");
         return traceLinesWConsumption;
     }
 
